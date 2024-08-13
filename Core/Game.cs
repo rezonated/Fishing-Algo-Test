@@ -29,7 +29,7 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
             return;
         }
 
-        if (player.FishingPole != null && (!player.FishingPole.FishSize.Equals(FishSize.Small) || !player.HasOnlyRedBait() || pond.HasSpecificFish(FishSize.Small, FishColor.Red)))
+        if (!player.FishingPole.FishSize.Equals(FishSize.Small) || !player.HasOnlyRedBait() || pond.HasSpecificFish(FishSize.Small, FishColor.Red))
         {
             BuyBaits();
             await PlayDayAsync();
@@ -228,7 +228,7 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
             didFish = true;
         }
 
-        var result = await performanceEvaluationStrategy.EvaluateAsync(player, didFish);
+        PerformanceResult result = await performanceEvaluationStrategy.EvaluateAsync(player, didFish);
         switch (result)
         {
             case PerformanceResult.Win:
@@ -240,8 +240,6 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
             case PerformanceResult.Tie:
                 Console.WriteLine("It's a tie! You kept the same gold.");
                 break;
-            default:
-                throw new ArgumentOutOfRangeException();
         }
 
         Console.WriteLine($"End of Day. You have {player.Gold} gold.");
@@ -256,19 +254,14 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
 
     public async Task StartGameAsync()
     {
-        var day = 1;
+        int day = 1;
         while (true)
         {
             await StartDayAsync(day);
-            
+            //await PlayDayAsync();
             day++;
-            
             Console.WriteLine("Do you want to continue? (y/n)");
-            if (Console.ReadLine()?.ToLower() == "y")
-            {
-                continue;
-            }
-
+            if (Console.ReadLine().ToLower() == "y") continue;
             QuitGame();
             break;
         }

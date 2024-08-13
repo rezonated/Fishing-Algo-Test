@@ -1,5 +1,7 @@
 ﻿namespace FishingAlgoTest.Constants;
 
+// Constants
+
 public static class GameConstants
 {
     public const int SmallFishingPoleCost = 5;
@@ -32,9 +34,9 @@ public static class GameConstants
     public const int BlueFishMinPercentage = 25;
     public const int BlueFishMaxPercentage = 60;
 
-    public static readonly int MinCastingDelayMilliseconds = TimeSpan.FromSeconds(2).Milliseconds;
-    public static readonly int MaxCastingDelayMilliseconds = TimeSpan.FromSeconds(3).Milliseconds;
+    public const int MinCastingDelayMilliseconds = 2000; // 2 seconds
+    public const int MaxCastingDelayMilliseconds = 3000; // 3 seconds
 
-    public static readonly int MinJudgingDelayMilliseconds = TimeSpan.FromSeconds(1).Milliseconds;
-    public static readonly int MaxJudgingDelayMilliseconds = TimeSpan.FromSeconds(2).Milliseconds;
+    public const int MinJudgingDelayMilliseconds = 1000; // 1 second
+    public const int MaxJudgingDelayMilliseconds = 2000; // 2 seconds
 }

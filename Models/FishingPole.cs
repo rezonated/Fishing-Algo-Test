@@ -3,22 +3,30 @@ using FishingAlgoTest.Interfaces;
 
 namespace FishingAlgoTest.Models;
 
-public class FishingPole(FishingPoleType type, int cost, FishSize fishSize) : IRentable
+public class FishingPole : IRentable
 {
-    private FishingPoleType Type { get; } = type;
-    private int Cost { get; } = cost;
-    public FishSize FishSize { get; } = fishSize;
+    public FishingPoleType Type { get; }
+    public int Cost { get; }
+    public FishSize FishSize { get; }
+
+    public FishingPole(FishingPoleType type, int cost, FishSize fishSize)
+    {
+        Type = type;
+        Cost = cost;
+        FishSize = fishSize;
+    }
 
     public void Rent(Player player)
     {
-        if (player.Gold < Cost)
+        if (player.Gold >= Cost)
         {
-            Console.WriteLine("\nNot enough gold to rent this pole.");
-            return;
+            player.Gold -= Cost;
+            player.FishingPole = this;
+            Console.WriteLine($"You rented a {Type} Fishing Pole. You have {player.Gold} gold left.");
         }
-        
-        player.Gold -= Cost;
-        player.FishingPole = this;
-        Console.WriteLine($"\nYou rented a {Type} Fishing Pole. You have {player.Gold} gold left.");
+        else
+        {
+            Console.WriteLine("Not enough gold to rent this pole.");
+        }
     }
 }

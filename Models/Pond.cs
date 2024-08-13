@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using FishingAlgoTest.Constants;
+﻿using FishingAlgoTest.Constants;
 using FishingAlgoTest.Enums;
 using FishingAlgoTest.Utilities;
 
@@ -7,7 +6,7 @@ namespace FishingAlgoTest.Models;
 
 public class Pond
 {
-    private readonly List<Fish?> fishes = [];
+    private readonly List<Fish> fishes = [];
 
     public void GenerateForecast()
     {
@@ -44,20 +43,16 @@ public class Pond
         }
     }
 
-    private static FishColor DetermineFishColor(int redPercentage, int bluePercentage)
+    private FishColor DetermineFishColor(int redPercentage, int bluePercentage)
     {
         var roll = RandomGenerator.Next(0, 100);
         if (roll < redPercentage) return FishColor.Red;
         return roll < redPercentage + bluePercentage ? FishColor.Blue : FishColor.Green;
     }
 
-    public Fish? CatchFish(FishColor baitColor, FishSize poleSize)
+    public Fish CatchFish(FishColor baitColor, FishSize poleSize)
     {
-        var fishToCatch = fishes.FindAll(f =>
-        {
-            Debug.Assert(f != null, nameof(f) + " != null");
-            return f.Color == baitColor && f.Size == poleSize;
-        });
+        var fishToCatch = fishes.FindAll(f => f.Color == baitColor && f.Size == poleSize);
 
         if (fishToCatch.Count <= 0)
         {
@@ -76,11 +71,7 @@ public class Pond
     public void DisplayAvailableFishes()
     {
         var groupedFishes = fishes
-            .GroupBy(f =>
-            {
-                Debug.Assert(f != null, nameof(f) + " != null");
-                return new { f.Color, f.Size };
-            })
+            .GroupBy(f => new { f.Color, f.Size })
             .Select(group => new
             {
                 group.Key.Color,
@@ -88,21 +79,17 @@ public class Pond
                 Count = group.Count()
             });
 
-        Console.WriteLine("\nAvailable fishes in the pond:");
+        Console.WriteLine("Available fishes in the pond:");
         foreach (var fish in groupedFishes)
         {
-            Console.WriteLine($"{fish.Color} {fish.Size} fish: x{fish.Count}");
+            Console.WriteLine($"{fish.Color} {fish.Size} fish: {fish.Count} available");
         }
     }
 
     public (FishSize size, FishColor color) GetBestFishingOption()
     {
         var bestFishGroup = fishes
-            .GroupBy(f =>
-            {
-                Debug.Assert(f != null, nameof(f) + " != null");
-                return new { f.Color, f.Size };
-            }).MaxBy(group => group.Count());
+            .GroupBy(f => new { f.Color, f.Size }).MaxBy(group => group.Count());
 
         return bestFishGroup != null
             ? (bestFishGroup.Key.Size, bestFishGroup.Key.Color)
@@ -111,19 +98,11 @@ public class Pond
 
     public bool CanBeCaughtWithPole(FishSize fishSize)
     {
-        return fishes.Any(f =>
-        {
-            Debug.Assert(f != null, nameof(f) + " != null");
-            return f.Size == fishSize;
-        });
+        return fishes.Any(f => f.Size == fishSize);
     }
 
     public bool HasSpecificFish(FishSize size, FishColor color)
     {
-        return fishes.Any(f =>
-        {
-            Debug.Assert(f != null, nameof(f) + " != null");
-            return f.Size == size && f.Color == color;
-        });
+        return fishes.Any(f => f.Size == size && f.Color == color);
     }
 }
