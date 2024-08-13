@@ -392,8 +392,15 @@
 }
 
 
-        public PerformanceResult EvaluatePerformance()
+        public PerformanceResult EvaluatePerformance(bool didFish)
         {
+            if (!didFish)
+            {
+                // If the player skipped the day without fishing, the result is always a tie.
+                return PerformanceResult.Tie;
+            }
+
+            // Suspense delay before showing the result
             int judgingDelay = new Random().Next(GameConstants.MinJudgingDelayMilliseconds,
                 GameConstants.MaxJudgingDelayMilliseconds);
             Console.WriteLine("Judging your performance...");
@@ -401,11 +408,12 @@
 
             if (Gold > 100)
                 return PerformanceResult.Win;
-            else if (Gold < 100)
+            else if (Gold <= 100)
                 return PerformanceResult.Lose;
             else
                 return PerformanceResult.Tie;
         }
+
     }
 
     // Game Class
@@ -430,11 +438,16 @@
             {
                 _resetWithoutBaitBuying = false;
                 Console.WriteLine($"Day {day} starts! (Tie from previous day, skipping bait buying)");
+                Console.WriteLine($"Initial gold: {_player.Gold}");
                 return;
             }
 
             Console.WriteLine($"Day {day} starts!");
             _pond.GenerateForecast();
+
+            // State the initial gold after the forecast
+            Console.WriteLine($"Initial gold: {_player.Gold}");
+
             ChooseFishingPole();
 
             if (_skipDay)
@@ -457,6 +470,7 @@
                 return;
             }
         }
+
 
         private void ChooseFishingPole()
         {
@@ -639,25 +653,28 @@
 
         public void PlayDay()
         {
+            bool didFish = false;
+
             if (_player.FishingPole != null && !_skipDay)
             {
                 _player.Fish(_pond);
+                didFish = true; // Player started fishing
+            }
 
-                PerformanceResult result = _player.EvaluatePerformance();
-                switch (result)
-                {
-                    case PerformanceResult.Win:
-                        Console.WriteLine("You won! You earned more than 100 gold.");
-                        break;
-                    case PerformanceResult.Lose:
-                        Console.WriteLine("You lost! You earned less than 100 gold.");
-                        break;
-                    case PerformanceResult.Tie:
-                        Console.WriteLine("It's a tie! You kept the same gold.");
-                        _resetWithoutBaitBuying = true;
-                        ResetDay();
-                        return; // Skip further processing
-                }
+            PerformanceResult result = _player.EvaluatePerformance(didFish);
+            switch (result)
+            {
+                case PerformanceResult.Win:
+                    Console.WriteLine("You won! You earned more than 100 gold.");
+                    break;
+                case PerformanceResult.Lose:
+                    Console.WriteLine("You lost! You earned 100 gold or less.");
+                    break;
+                case PerformanceResult.Tie:
+                    Console.WriteLine("It's a tie! You kept the same gold.");
+                    _resetWithoutBaitBuying = true;
+                    ResetDay();
+                    return; // Skip further processing
             }
 
             Console.WriteLine($"End of Day. You have {_player.Gold} gold.");
