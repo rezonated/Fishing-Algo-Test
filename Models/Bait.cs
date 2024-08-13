@@ -3,34 +3,28 @@ using FishingAlgoTest.Interfaces;
 
 namespace FishingAlgoTest.Models;
 
-// Bait Class
-public class Bait : IPurchasable
+public class Bait(FishColor color, int cost) : IPurchasable
 {
-    public FishColor Color { get; }
-    public int Cost { get; }
-
-    public Bait(FishColor color, int cost)
-    {
-        Color = color;
-        Cost = cost;
-    }
+    public FishColor Color { get; } = color;
+    private int Cost { get; } = cost;
 
     public void Buy(Player player, int quantity)
     {
-        int totalCost = Cost * quantity;
-        if (player.Gold >= totalCost)
-        {
-            player.Gold -= totalCost;
-            for (int i = 0; i < quantity; i++)
-            {
-                player.Baits.Add(this);
-            }
+        var totalCost = Cost * quantity;
 
-            Console.WriteLine($"You bought {quantity} {Color} bait(s). You have {player.Gold} gold left.");
-        }
-        else
+        if (player.Gold < totalCost)
         {
-            Console.WriteLine("Not enough gold to buy this amount of bait.");
+            Console.WriteLine("\nNot enough gold to buy this amount of bait.");
+            return;
         }
+
+        
+        player.Gold -= totalCost;
+        for (var i = 0; i < quantity; i++)
+        {
+            player.Baits.Add(this);
+        }
+
+        Console.WriteLine($"\nYou bought x{quantity} {Color} bait(s). You have {player.Gold} gold left.");
     }
 }

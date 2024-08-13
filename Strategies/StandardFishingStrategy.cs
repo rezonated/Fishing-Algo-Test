@@ -12,7 +12,7 @@ public class StandardFishingStrategy : IFishingStrategy
     {
         while (player.Baits.Count > 0 && pond.HasFish())
         {
-            if (!pond.CanBeCaughtWithPole(player.FishingPole.FishSize))
+            if (player.FishingPole != null && !pond.CanBeCaughtWithPole(player.FishingPole.FishSize))
             {
                 Console.WriteLine(
                     $"The rented pole can only catch {player.FishingPole.FishSize} fish, but no such fish are available in the pond. Skipping fishing.");
@@ -33,34 +33,35 @@ public class StandardFishingStrategy : IFishingStrategy
                 "Casting...");
 
             var bait = player.Baits.First(b => b.Color == baitColor);
-            var caughtFish = pond.CatchFish(bait.Color, player.FishingPole.FishSize);
+            if (player.FishingPole != null)
+            {
+                var caughtFish = pond.CatchFish(bait.Color, player.FishingPole.FishSize);
 
-            if (caughtFish != null)
-            {
-                Console.WriteLine(
-                    $"You caught a {caughtFish.Color} {caughtFish.Size} fish worth {caughtFish.Value} gold!");
-                player.Gold += caughtFish.Value;
-            }
-            else
-            {
-                Console.WriteLine("No fish caught this time.");
+                if (caughtFish != null)
+                {
+                    Console.WriteLine(
+                        $"You caught a {caughtFish.Color} {caughtFish.Size} fish worth {caughtFish.Value} gold!");
+                    player.Gold += caughtFish.Value;
+                }
+                else
+                {
+                    Console.WriteLine("No fish caught this time.");
+                }
             }
 
             player.Baits.Remove(bait);
         }
     }
 
-    private FishColor? ChooseBait(Player player)
+    private static FishColor? ChooseBait(Player player)
     {
         while (true)
         {
-            Console.WriteLine("Choose which bait to use:");
-            player.DisplayBaitInventory();
-            Console.WriteLine("1. Red bait");
-            Console.WriteLine("2. Blue bait");
-            Console.WriteLine("3. Green bait");
-            Console.WriteLine("4. End the day");
-
+            Console.WriteLine("\nChoose which bait to use:");
+            Console.WriteLine($"1. Red bait x{player.GetBaitCount(FishColor.Red)}");
+            Console.WriteLine($"2. Blue bait x{player.GetBaitCount(FishColor.Blue)}");
+            Console.WriteLine($"3. Green bait x{player.GetBaitCount(FishColor.Green)}");
+            
             if (int.TryParse(Console.ReadLine(), out int baitChoice))
             {
                 FishColor? chosenBaitColor = baitChoice switch
@@ -92,17 +93,17 @@ public class StandardFishingStrategy : IFishingStrategy
         }
     }
 
-    private void WaitForSpacebar()
+    private static void WaitForSpacebar()
     {
         while (Console.ReadKey(true).Key != ConsoleKey.Spacebar)
         {
         }
     }
 
-    private async Task ApplyDelayAsync(int minMilliseconds, int maxMilliseconds, string message)
+    private static async Task ApplyDelayAsync(int minMilliseconds, int maxMilliseconds, string message)
     {
         Console.WriteLine(message);
-        int delay = RandomGenerator.Next(minMilliseconds, maxMilliseconds);
+        var delay = RandomGenerator.Next(minMilliseconds, maxMilliseconds);
         await Task.Delay(delay);
     }
 }

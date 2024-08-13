@@ -1,7 +1,7 @@
 ﻿namespace FishingAlgoTest.Utilities;
 
-public class RandomGenerator
+public static class RandomGenerator
 {
-    private static readonly Random _random = new Random();
-    public static int Next(int minValue, int maxValue) => _random.Next(minValue, maxValue);
+    private static readonly Random Random = new();
+    public static int Next(int minValue, int maxValue) => Random.Next(minValue, maxValue);
 }

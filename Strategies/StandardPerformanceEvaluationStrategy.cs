@@ -23,10 +23,12 @@ public class StandardPerformanceEvaluationStrategy : IPerformanceEvaluationStrat
             PerformanceResult.Tie;
     }
 
-    private async Task ApplyDelayAsync(int minMilliseconds, int maxMilliseconds, string message)
+    private static async Task ApplyDelayAsync(int minMilliseconds, int maxMilliseconds, string message)
     {
         Console.WriteLine(message);
-        int delay = RandomGenerator.Next(minMilliseconds, maxMilliseconds);
+        
+        var delay = RandomGenerator.Next(minMilliseconds, maxMilliseconds);
+        
         await Task.Delay(delay);
     }
 }
