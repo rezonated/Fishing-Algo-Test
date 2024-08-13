@@ -21,7 +21,6 @@
         public const int BigFishMinValue = 10;
         public const int BigFishMaxValue = 15;
 
-        // Forecast constants
         public const int SmallFishMinCount = 3;
         public const int SmallFishMaxCount = 12;
         public const int MediumFishMinCount = 2;
@@ -70,8 +69,19 @@
         Tie
     }
 
+    // Interface Segregation
+    public interface IRentable
+    {
+        void Rent(Player player);
+    }
+
+    public interface IPurchasable
+    {
+        void Buy(Player player, int quantity);
+    }
+
     // Fishing Pole Class
-    public class FishingPole
+    public class FishingPole : IRentable
     {
         public FishingPoleType Type { get; }
         public int Cost { get; }
@@ -83,10 +93,24 @@
             Cost = cost;
             FishSize = fishSize;
         }
+
+        public void Rent(Player player)
+        {
+            if (player.Gold >= Cost)
+            {
+                player.Gold -= Cost;
+                player.FishingPole = this;
+                Console.WriteLine($"You rented a {Type} Fishing Pole. You have {player.Gold} gold left.");
+            }
+            else
+            {
+                Console.WriteLine("Not enough gold to rent this pole.");
+            }
+        }
     }
 
     // Bait Class
-    public class Bait
+    public class Bait : IPurchasable
     {
         public FishColor Color { get; }
         public int Cost { get; }
@@ -95,6 +119,24 @@
         {
             Color = color;
             Cost = cost;
+        }
+
+        public void Buy(Player player, int quantity)
+        {
+            int totalCost = Cost * quantity;
+            if (player.Gold >= totalCost)
+            {
+                player.Gold -= totalCost;
+                for (int i = 0; i < quantity; i++)
+                {
+                    player.Baits.Add(this);
+                }
+                Console.WriteLine($"You bought {quantity} {Color} bait(s). You have {player.Gold} gold left.");
+            }
+            else
+            {
+                Console.WriteLine("Not enough gold to buy this amount of bait.");
+            }
         }
     }
 
@@ -109,17 +151,11 @@
         {
             Size = size;
             Color = color;
-            Value = GetFishValue(size);
-        }
-
-        private int GetFishValue(FishSize size)
-        {
-            Random rand = new Random();
-            return size switch
+            Value = size switch
             {
-                FishSize.Small => rand.Next(GameConstants.SmallFishMinValue, GameConstants.SmallFishMaxValue + 1),
-                FishSize.Medium => rand.Next(GameConstants.MediumFishMinValue, GameConstants.MediumFishMaxValue + 1),
-                FishSize.Big => rand.Next(GameConstants.BigFishMinValue, GameConstants.BigFishMaxValue + 1),
+                FishSize.Small => RandomGenerator.Next(GameConstants.SmallFishMinValue, GameConstants.SmallFishMaxValue + 1),
+                FishSize.Medium => RandomGenerator.Next(GameConstants.MediumFishMinValue, GameConstants.MediumFishMaxValue + 1),
+                FishSize.Big => RandomGenerator.Next(GameConstants.BigFishMinValue, GameConstants.BigFishMaxValue + 1),
                 _ => GameConstants.SmallFishMinValue
             };
         }
@@ -137,49 +173,40 @@
 
         public void GenerateForecast()
         {
-            Random rand = new Random();
-
             // Dynamically generate fish counts based on ranges in GameConstants
-            int smallFish = rand.Next(GameConstants.SmallFishMinCount, GameConstants.SmallFishMaxCount + 1);
-            int mediumFish = rand.Next(GameConstants.MediumFishMinCount, GameConstants.MediumFishMaxCount + 1);
-            int bigFish = rand.Next(GameConstants.BigFishMinCount, GameConstants.BigFishMaxCount + 1);
+            int smallFishCount = RandomGenerator.Next(GameConstants.SmallFishMinCount, GameConstants.SmallFishMaxCount + 1);
+            int mediumFishCount = RandomGenerator.Next(GameConstants.MediumFishMinCount, GameConstants.MediumFishMaxCount + 1);
+            int bigFishCount = RandomGenerator.Next(GameConstants.BigFishMinCount, GameConstants.BigFishMaxCount + 1);
 
             // Dynamically generate fish percentages based on ranges in GameConstants
-            int redFishPercentage =
-                rand.Next(GameConstants.RedFishMinPercentage, GameConstants.RedFishMaxPercentage + 1);
-            int blueFishPercentage =
-                rand.Next(GameConstants.BlueFishMinPercentage, GameConstants.BlueFishMaxPercentage + 1);
-            int totalPercentage = redFishPercentage + blueFishPercentage;
+            int redFishPercentage = RandomGenerator.Next(GameConstants.RedFishMinPercentage, GameConstants.RedFishMaxPercentage + 1);
+            int blueFishPercentage = RandomGenerator.Next(GameConstants.BlueFishMinPercentage, GameConstants.BlueFishMaxPercentage + 1);
+            int greenFishPercentage = Math.Max(0, 100 - (redFishPercentage + blueFishPercentage));
 
-            // Safeguard to ensure valid percentages
-            int greenFishPercentage = 100 - totalPercentage;
-            if (greenFishPercentage < 0)
-            {
-                greenFishPercentage = 0;
-            }
-
-            Console.WriteLine(
-                $"Today we're seeing {smallFish} small fish, {mediumFish} medium fish and {bigFish} big fish.");
-            Console.WriteLine(
-                $"{redFishPercentage}% of them are red, {blueFishPercentage}% are blue and {greenFishPercentage}% are green!");
+            Console.WriteLine($"Today's forecast: {smallFishCount} small fish, {mediumFishCount} medium fish, and {bigFishCount} big fish.");
+            Console.WriteLine($"{redFishPercentage}% are red, {blueFishPercentage}% are blue, and {greenFishPercentage}% are green!");
 
             _fishes.Clear();
-            AddFish(FishSize.Small, smallFish, redFishPercentage, blueFishPercentage, greenFishPercentage);
-            AddFish(FishSize.Medium, mediumFish, redFishPercentage, blueFishPercentage, greenFishPercentage);
-            AddFish(FishSize.Big, bigFish, redFishPercentage, blueFishPercentage, greenFishPercentage);
+            AddFish(FishSize.Small, smallFishCount, redFishPercentage, blueFishPercentage, greenFishPercentage);
+            AddFish(FishSize.Medium, mediumFishCount, redFishPercentage, blueFishPercentage, greenFishPercentage);
+            AddFish(FishSize.Big, bigFishCount, redFishPercentage, blueFishPercentage, greenFishPercentage);
         }
 
         private void AddFish(FishSize size, int count, int redPercentage, int bluePercentage, int greenPercentage)
         {
-            Random rand = new Random();
-
             for (int i = 0; i < count; i++)
             {
-                int roll = rand.Next(0, 100);
-                FishColor color = roll < redPercentage ? FishColor.Red :
-                    roll < redPercentage + bluePercentage ? FishColor.Blue : FishColor.Green;
+                FishColor color = DetermineFishColor(redPercentage, bluePercentage);
                 _fishes.Add(new Fish(size, color));
             }
+        }
+
+        private FishColor DetermineFishColor(int redPercentage, int bluePercentage)
+        {
+            int roll = RandomGenerator.Next(0, 100);
+            if (roll < redPercentage) return FishColor.Red;
+            if (roll < redPercentage + bluePercentage) return FishColor.Blue;
+            return FishColor.Green;
         }
 
         public Fish CatchFish(FishColor baitColor, FishSize poleSize)
@@ -188,7 +215,7 @@
 
             if (fishToCatch.Count > 0)
             {
-                var fish = fishToCatch[new Random().Next(fishToCatch.Count)];
+                var fish = fishToCatch[RandomGenerator.Next(0, fishToCatch.Count)];
                 _fishes.Remove(fish);
                 return fish;
             }
@@ -197,16 +224,6 @@
         }
 
         public bool HasFish() => _fishes.Count > 0;
-
-        public bool HasSpecificFish(FishSize size, FishColor color)
-        {
-            return _fishes.Any(f => f.Size == size && f.Color == color);
-        }
-
-        public bool CanBeCaughtWithPole(FishSize fishSize)
-        {
-            return _fishes.Any(f => f.Size == fishSize);
-        }
 
         public void DisplayAvailableFishes()
         {
@@ -237,48 +254,26 @@
                 ? (bestFishGroup.Key.Size, bestFishGroup.Key.Color)
                 : (FishSize.Small, FishColor.Red);
         }
+
+        public bool CanBeCaughtWithPole(FishSize fishSize)
+        {
+            return _fishes.Any(f => f.Size == fishSize);
+        }
+
+        public bool HasSpecificFish(FishSize size, FishColor color)
+        {
+            return _fishes.Any(f => f.Size == size && f.Color == color);
+        }
     }
 
     // Player Class
     public class Player
     {
-        public int Gold { get; private set; } = 100;
-        public FishingPole FishingPole { get; private set; }
+        public int Gold { get; set; } = 100;
+        public FishingPole FishingPole { get; set; }
         public List<Bait> Baits { get; private set; } = new List<Bait>();
 
-        public void RentFishingPole(FishingPole pole)
-        {
-            if (Gold >= pole.Cost)
-            {
-                FishingPole = pole;
-                Gold -= pole.Cost;
-                Console.WriteLine($"You rented a {pole.Type} Fishing Pole. You have {Gold} gold left.");
-            }
-            else
-            {
-                Console.WriteLine("Not enough gold to rent this pole.");
-            }
-        }
-
-        public void BuyBait(Bait bait, int quantity)
-        {
-            int totalCost = bait.Cost * quantity;
-            if (Gold >= totalCost)
-            {
-                for (int i = 0; i < quantity; i++)
-                {
-                    Baits.Add(bait);
-                }
-
-                Gold -= totalCost;
-                Console.WriteLine($"You bought {quantity} {bait.Color} bait(s). You have {Gold} gold left.");
-                DisplayBaitInventory();
-            }
-            else
-            {
-                Console.WriteLine("Not enough gold to buy this amount of bait.");
-            }
-        }
+        public bool HasOnlyRedBait() => Baits.All(b => b.Color == FishColor.Red);
 
         public void DisplayBaitInventory()
         {
@@ -295,160 +290,171 @@
                 Console.WriteLine($"{group.Color} bait: {group.Count} available");
             }
         }
+    }
 
-        public bool HasOnlyRedBait()
-        {
-            return Baits.All(b => b.Color == FishColor.Red);
-        }
-
-        public void Fish(Pond pond)
-{
-    while (Baits.Count > 0 && pond.HasFish())
+    // Fishing Context Strategy Pattern
+    public interface IFishingStrategy
     {
-        if (!pond.CanBeCaughtWithPole(FishingPole.FishSize))
+        Task FishAsync(Pond pond, Player player);
+    }
+
+    public class StandardFishingStrategy : IFishingStrategy
+    {
+        public async Task FishAsync(Pond pond, Player player)
         {
-            Console.WriteLine($"The rented pole can only catch {FishingPole.FishSize} fish, but no such fish are available in the pond. Skipping fishing.");
-            break;
-        }
-
-        pond.DisplayAvailableFishes();
-
-        FishColor? chosenBaitColor = null;
-        while (chosenBaitColor == null)
-        {
-            Console.WriteLine("Choose which bait to use:");
-
-            // Display the bait inventory as part of the fishing prompt
-            var baitInventory = Baits
-                .GroupBy(b => b.Color)
-                .Select(group => new
-                {
-                    Color = group.Key,
-                    Count = group.Count()
-                }).ToList();
-
-            Console.WriteLine($"1. Red bait ({baitInventory.FirstOrDefault(b => b.Color == FishColor.Red)?.Count ?? 0} available)");
-            Console.WriteLine($"2. Blue bait ({baitInventory.FirstOrDefault(b => b.Color == FishColor.Blue)?.Count ?? 0} available)");
-            Console.WriteLine($"3. Green bait ({baitInventory.FirstOrDefault(b => b.Color == FishColor.Green)?.Count ?? 0} available)");
-            Console.WriteLine("4. End the day");
-
-            if (int.TryParse(Console.ReadLine(), out int baitChoice))
+            while (player.Baits.Count > 0 && pond.HasFish())
             {
-                chosenBaitColor = baitChoice switch
+                if (!pond.CanBeCaughtWithPole(player.FishingPole.FishSize))
                 {
-                    1 => FishColor.Red,
-                    2 => FishColor.Blue,
-                    3 => FishColor.Green,
-                    4 => null, // Special case for ending the day
-                    _ => null
-                };
-
-                if (baitChoice == 4)
-                {
-                    Console.WriteLine("You decided to end the day early.");
+                    Console.WriteLine($"The rented pole can only catch {player.FishingPole.FishSize} fish, but no such fish are available in the pond. Skipping fishing.");
                     break;
                 }
 
-                if (chosenBaitColor == null || !Baits.Any(b => b.Color == chosenBaitColor))
+                pond.DisplayAvailableFishes();
+
+                var baitColor = ChooseBait(player);
+
+                if (baitColor == null)
+                    break;
+
+                Console.WriteLine($"You chose {baitColor} bait. Press the spacebar to cast and pull the pole.");
+                WaitForSpacebar();
+
+                await ApplyDelayAsync(GameConstants.MinCastingDelayMilliseconds, GameConstants.MaxCastingDelayMilliseconds, "Casting...");
+
+                var bait = player.Baits.First(b => b.Color == baitColor);
+                var caughtFish = pond.CatchFish(bait.Color, player.FishingPole.FishSize);
+
+                if (caughtFish != null)
                 {
+                    Console.WriteLine($"You caught a {caughtFish.Color} {caughtFish.Size} fish worth {caughtFish.Value} gold!");
+                    player.Gold += caughtFish.Value;
+                }
+                else
+                {
+                    Console.WriteLine("No fish caught this time.");
+                }
+
+                player.Baits.Remove(bait);
+            }
+        }
+
+        private FishColor? ChooseBait(Player player)
+        {
+            while (true)
+            {
+                Console.WriteLine("Choose which bait to use:");
+                player.DisplayBaitInventory();
+                Console.WriteLine("1. Red bait");
+                Console.WriteLine("2. Blue bait");
+                Console.WriteLine("3. Green bait");
+                Console.WriteLine("4. End the day");
+
+                if (int.TryParse(Console.ReadLine(), out int baitChoice))
+                {
+                    FishColor? chosenBaitColor = baitChoice switch
+                    {
+                        1 => FishColor.Red,
+                        2 => FishColor.Blue,
+                        3 => FishColor.Green,
+                        4 => null,
+                        _ => null
+                    };
+
+                    if (baitChoice == 4)
+                    {
+                        Console.WriteLine("You decided to end the day early.");
+                        return null;
+                    }
+
+                    if (chosenBaitColor != null && player.Baits.Any(b => b.Color == chosenBaitColor))
+                    {
+                        return chosenBaitColor;
+                    }
+
                     Console.WriteLine("Invalid choice or no baits of that type available. Please choose again.");
-                    chosenBaitColor = null;
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input. Please enter a number corresponding to the bait type.");
                 }
             }
-            else
-            {
-                Console.WriteLine("Invalid input. Please enter a number corresponding to the bait type.");
-            }
         }
 
-        if (chosenBaitColor == null) break;
-
-        Console.WriteLine($"You chose {chosenBaitColor} bait. Press the spacebar to cast and pull the pole.");
-        while (Console.ReadKey(true).Key != ConsoleKey.Spacebar)
+        private void WaitForSpacebar()
         {
+            while (Console.ReadKey(true).Key != ConsoleKey.Spacebar) { }
         }
 
-// Adding suspense delay before determining if a fish is caught
-        int castingDelay = new Random().Next(GameConstants.MinCastingDelayMilliseconds,
-            GameConstants.MaxCastingDelayMilliseconds);
-        Console.WriteLine("Casting...");
-        Thread.Sleep(castingDelay);
-
-        var bait = Baits.First(b => b.Color == chosenBaitColor);
-        var caughtFish = pond.CatchFish(bait.Color, FishingPole.FishSize);
-
-        if (caughtFish != null)
+        private async Task ApplyDelayAsync(int minMilliseconds, int maxMilliseconds, string message)
         {
-            Console.WriteLine($"You caught a {caughtFish.Color} {caughtFish.Size} fish worth {caughtFish.Value} gold!");
-            Gold += caughtFish.Value;
+            Console.WriteLine(message);
+            int delay = RandomGenerator.Next(minMilliseconds, maxMilliseconds);
+            await Task.Delay(delay);
         }
-        else
-        {
-            Console.WriteLine("No fish caught this time.");
-        }
-
-        Baits.Remove(bait);
     }
-}
 
+    // Performance Evaluation Strategy Pattern
+    public interface IPerformanceEvaluationStrategy
+    {
+        Task<PerformanceResult> EvaluateAsync(Player player, bool didFish);
+    }
 
-        public PerformanceResult EvaluatePerformance(bool didFish)
+    public class StandardPerformanceEvaluationStrategy : IPerformanceEvaluationStrategy
+    {
+        public async Task<PerformanceResult> EvaluateAsync(Player player, bool didFish)
         {
             if (!didFish)
             {
-                // If the player skipped the day without fishing, the result is always a tie.
                 return PerformanceResult.Tie;
             }
 
-            // Suspense delay before showing the result
-            int judgingDelay = new Random().Next(GameConstants.MinJudgingDelayMilliseconds,
-                GameConstants.MaxJudgingDelayMilliseconds);
-            Console.WriteLine("Judging your performance...");
-            System.Threading.Thread.Sleep(judgingDelay);
+            await ApplyDelayAsync(GameConstants.MinJudgingDelayMilliseconds, GameConstants.MaxJudgingDelayMilliseconds, "Judging your performance...");
 
-            if (Gold > 100)
-                return PerformanceResult.Win;
-            else if (Gold <= 100)
-                return PerformanceResult.Lose;
-            else
-                return PerformanceResult.Tie;
+            return player.Gold > 100 ? PerformanceResult.Win :
+                   player.Gold < 100 ? PerformanceResult.Lose :
+                   PerformanceResult.Tie;
         }
 
+        private async Task ApplyDelayAsync(int minMilliseconds, int maxMilliseconds, string message)
+        {
+            Console.WriteLine(message);
+            int delay = RandomGenerator.Next(minMilliseconds, maxMilliseconds);
+            await Task.Delay(delay);
+        }
     }
 
     // Game Class
     public class Game
     {
-        private Player _player;
-        private Pond _pond;
+        private readonly Player _player;
+        private readonly Pond _pond;
+        private readonly IFishingStrategy _fishingStrategy;
+        private readonly IPerformanceEvaluationStrategy _performanceEvaluationStrategy;
         private bool _skipDay;
-        private bool _resetWithoutBaitBuying;
+        
 
-        public Game()
+        public Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrategy performanceEvaluationStrategy)
         {
             _player = new Player();
             _pond = new Pond();
+            _fishingStrategy = fishingStrategy;
+            _performanceEvaluationStrategy = performanceEvaluationStrategy;
             _skipDay = false;
-            _resetWithoutBaitBuying = false;
         }
 
-        public void StartDay(int day)
+        public async Task StartDayAsync(int day)
         {
-            if (_resetWithoutBaitBuying)
-            {
-                _resetWithoutBaitBuying = false;
-                Console.WriteLine($"Day {day} starts! (Tie from previous day, skipping bait buying)");
-                Console.WriteLine($"Initial gold: {_player.Gold}");
-                return;
-            }
 
             Console.WriteLine($"Day {day} starts!");
             _pond.GenerateForecast();
-
-            // State the initial gold after the forecast
             Console.WriteLine($"Initial gold: {_player.Gold}");
 
-            ChooseFishingPole();
+            if (!ChooseFishingPole())
+            {
+                ResetDay();
+                return;
+            }
 
             if (_skipDay)
             {
@@ -456,77 +462,70 @@
                 return;
             }
 
-            BuyBaits();
-            Console.WriteLine(
-                $"You have rented a {_player.FishingPole.Type} Fishing Pole and have {_player.Gold} gold left.");
-            Console.WriteLine($"You have {_player.Baits.Count} baits.");
-
-            if (_player.FishingPole.FishSize == FishSize.Small && _player.HasOnlyRedBait() &&
-                !_pond.HasSpecificFish(FishSize.Small, FishColor.Red))
+            if (!_player.FishingPole.FishSize.Equals(FishSize.Small) || !_player.HasOnlyRedBait() ||
+                _pond.HasSpecificFish(FishSize.Small, FishColor.Red))
             {
-                Console.WriteLine(
-                    "You have only small fishing pole and red bait, but there are no small red fish in the pond. Skipping fishing.");
-                PlayDay();
-                return;
+                BuyBaits();
+                await PlayDayAsync();
+            }
+            else
+            {
+                Console.WriteLine("No suitable fish for your pole and bait. Skipping the day.");
+                ResetDay();
             }
         }
 
-
-        private void ChooseFishingPole()
+        private bool ChooseFishingPole()
         {
-            bool validChoice = false;
-            while (!validChoice)
+            while (true)
             {
-                Console.WriteLine("Choose your fishing pole:");
-                Console.WriteLine($"1. Small fishing pole, {GameConstants.SmallFishingPoleCost} gold");
-                Console.WriteLine($"2. Medium fishing pole, {GameConstants.MediumFishingPoleCost} gold");
-                Console.WriteLine($"3. Big fishing pole, {GameConstants.BigFishingPoleCost} gold");
+                Console.WriteLine("\nChoose your fishing pole:");
+                Console.WriteLine("1. Small fishing pole");
+                Console.WriteLine("2. Medium fishing pole");
+                Console.WriteLine("3. Big fishing pole");
                 Console.WriteLine("4. Auto rent pole and buy baits based on forecast");
                 Console.WriteLine("5. Skip the day");
                 Console.WriteLine("6. Quit the game");
 
                 if (int.TryParse(Console.ReadLine(), out int choice))
                 {
-                    validChoice = true;
                     switch (choice)
                     {
                         case 1:
-                            _player.RentFishingPole(new FishingPole(FishingPoleType.Small,
-                                GameConstants.SmallFishingPoleCost, FishSize.Small));
-                            break;
+                            new FishingPole(FishingPoleType.Small, GameConstants.SmallFishingPoleCost, FishSize.Small).Rent(_player);
+                            return true;
                         case 2:
-                            _player.RentFishingPole(new FishingPole(FishingPoleType.Medium,
-                                GameConstants.MediumFishingPoleCost, FishSize.Medium));
-                            break;
+                            new FishingPole(FishingPoleType.Medium, GameConstants.MediumFishingPoleCost, FishSize.Medium).Rent(_player);
+                            return true;
                         case 3:
-                            _player.RentFishingPole(new FishingPole(FishingPoleType.Big,
-                                GameConstants.BigFishingPoleCost, FishSize.Big));
-                            break;
+                            new FishingPole(FishingPoleType.Big, GameConstants.BigFishingPoleCost, FishSize.Big).Rent(_player);
+                            return true;
                         case 4:
                             AutoRentAndBuyBaits();
-                            break;
+                            return true;
                         case 5:
-                            _skipDay = true; // Skip the day
-                            Console.WriteLine("Skipping the day...");
-                            Console.WriteLine("Performance resulted in a Tie.");
-                            _resetWithoutBaitBuying = true;
-                            //ResetDay();
-                            return; // Skip further processing for this day
+                            _skipDay = true;
+                            Console.WriteLine("\nSkipping the day...");
+                            return false;
                         case 6:
-                            Console.WriteLine("Quitting the game. Goodbye!");
-                            Environment.Exit(0);
+                            QuitGame();
                             break;
                         default:
-                            Console.WriteLine("Invalid choice. Please enter a number between 1 and 6.");
-                            validChoice = false;
+                            Console.WriteLine("\nInvalid choice. Please enter a number between 1 and 6.");
                             break;
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Invalid input. Please enter a number.");
+                    Console.WriteLine("\nInvalid input. Please enter a number.");
                 }
             }
+        }
+
+        private static void QuitGame()
+        {
+            Console.WriteLine("\nQuitting the game. Goodbye!");
+            Environment.Exit(0);
         }
 
         private void AutoRentAndBuyBaits()
@@ -536,21 +535,17 @@
             switch (bestOption.size)
             {
                 case FishSize.Small:
-                    _player.RentFishingPole(new FishingPole(FishingPoleType.Small, GameConstants.SmallFishingPoleCost,
-                        FishSize.Small));
+                    new FishingPole(FishingPoleType.Small, GameConstants.SmallFishingPoleCost, FishSize.Small).Rent(_player);
                     break;
                 case FishSize.Medium:
-                    _player.RentFishingPole(new FishingPole(FishingPoleType.Medium, GameConstants.MediumFishingPoleCost,
-                        FishSize.Medium));
+                    new FishingPole(FishingPoleType.Medium, GameConstants.MediumFishingPoleCost, FishSize.Medium).Rent(_player);
                     break;
                 case FishSize.Big:
-                    _player.RentFishingPole(new FishingPole(FishingPoleType.Big, GameConstants.BigFishingPoleCost,
-                        FishSize.Big));
+                    new FishingPole(FishingPoleType.Big, GameConstants.BigFishingPoleCost, FishSize.Big).Rent(_player);
                     break;
             }
 
             int goldLeft = _player.Gold;
-            int totalBaitCost = GameConstants.RedBaitCost + GameConstants.BlueBaitCost + GameConstants.GreenBaitCost;
 
             int weightedTotalCost = GameConstants.BestBaitWeight * GetBaitCost(bestOption.color) +
                                     GameConstants.OtherBaitWeight * GameConstants.RedBaitCost +
@@ -570,7 +565,7 @@
 
         private void BuyWeightedBaits(FishColor color, int quantity, FishColor bestColor = FishColor.Red)
         {
-            _player.BuyBait(new Bait(color, GetBaitCost(color)), quantity);
+            new Bait(color, GetBaitCost(color)).Buy(_player, quantity);
         }
 
         private void SpendRemainingGoldOnBaits(int remainingGold, FishColor bestColor)
@@ -578,25 +573,25 @@
             int bestCost = GetBaitCost(bestColor);
             if (remainingGold >= bestCost)
             {
-                _player.BuyBait(new Bait(bestColor, bestCost), remainingGold / bestCost);
+                new Bait(bestColor, bestCost).Buy(_player, remainingGold / bestCost);
                 remainingGold %= bestCost;
             }
 
             if (remainingGold >= GameConstants.GreenBaitCost)
             {
-                _player.BuyBait(new Bait(FishColor.Green, GameConstants.GreenBaitCost), 1);
+                new Bait(FishColor.Green, GameConstants.GreenBaitCost).Buy(_player, 1);
                 remainingGold -= GameConstants.GreenBaitCost;
             }
 
             if (remainingGold >= GameConstants.BlueBaitCost)
             {
-                _player.BuyBait(new Bait(FishColor.Blue, GameConstants.BlueBaitCost), 1);
+                new Bait(FishColor.Blue, GameConstants.BlueBaitCost).Buy(_player, 1);
                 remainingGold -= GameConstants.BlueBaitCost;
             }
 
             if (remainingGold >= GameConstants.RedBaitCost)
             {
-                _player.BuyBait(new Bait(FishColor.Red, GameConstants.RedBaitCost), 1);
+                new Bait(FishColor.Red, GameConstants.RedBaitCost).Buy(_player, 1);
             }
         }
 
@@ -636,7 +631,7 @@
 
                     if (bait != null)
                     {
-                        _player.BuyBait(bait, quantity);
+                        bait.Buy(_player, quantity);
                     }
                     else
                     {
@@ -645,23 +640,22 @@
                 }
                 else
                 {
-                    Console.WriteLine(
-                        "Invalid input. Please enter the bait number and quantity in the correct format (e.g., '2 10').");
+                    Console.WriteLine("Invalid input. Please enter the bait number and quantity in the correct format (e.g., '2 10').");
                 }
             }
         }
 
-        public void PlayDay()
+        public async Task PlayDayAsync()
         {
             bool didFish = false;
 
             if (_player.FishingPole != null && !_skipDay)
             {
-                _player.Fish(_pond);
-                didFish = true; // Player started fishing
+                await _fishingStrategy.FishAsync(_pond, _player);
+                didFish = true;
             }
 
-            PerformanceResult result = _player.EvaluatePerformance(didFish);
+            PerformanceResult result = await _performanceEvaluationStrategy.EvaluateAsync(_player, didFish);
             switch (result)
             {
                 case PerformanceResult.Win:
@@ -672,9 +666,7 @@
                     break;
                 case PerformanceResult.Tie:
                     Console.WriteLine("It's a tie! You kept the same gold.");
-                    _resetWithoutBaitBuying = true;
-                    ResetDay();
-                    return; // Skip further processing
+                    break;
             }
 
             Console.WriteLine($"End of Day. You have {_player.Gold} gold.");
@@ -683,21 +675,23 @@
 
         private void ResetDay()
         {
-            _player = new Player();
-            _pond = new Pond();
+            _player.FishingPole = null;
+            _player.Baits.Clear();
             _skipDay = false;
         }
 
-        public void StartGame()
+        public async Task StartGameAsync()
         {
             int day = 1;
             while (true)
             {
-                StartDay(day);
-                PlayDay();
+                await StartDayAsync(day);
+                await PlayDayAsync();
                 day++;
                 Console.WriteLine("Do you want to continue? (y/n)");
-                if (Console.ReadLine().ToLower() != "y") break;
+                if (Console.ReadLine().ToLower() == "y") continue;
+                QuitGame();
+                break;
             }
         }
     }
@@ -705,10 +699,19 @@
     // Main Program Entry Point
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Game game = new Game();
-            game.StartGame();
+            IFishingStrategy fishingStrategy = new StandardFishingStrategy();
+            IPerformanceEvaluationStrategy performanceEvaluationStrategy = new StandardPerformanceEvaluationStrategy();
+            Game game = new Game(fishingStrategy, performanceEvaluationStrategy);
+            await game.StartGameAsync();
         }
+    }
+
+    // Utility Class for Randomization
+    public static class RandomGenerator
+    {
+        private static readonly Random _random = new Random();
+        public static int Next(int minValue, int maxValue) => _random.Next(minValue, maxValue);
     }
 }
