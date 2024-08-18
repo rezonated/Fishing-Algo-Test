@@ -1,3 +1,4 @@
+# Fishing Algorithm Test
 Implemented the coding test for fishing game using C# and .NET 8.0 following the requirements:
 
 1. Player starts from 100 gold
