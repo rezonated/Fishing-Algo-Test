@@ -96,26 +96,26 @@ public class Game(IFishingDelayableStrategy fishingDelayableStrategy, IPerforman
 
             switch (choice)
             {
-                case 1:
+                case 1: // Rent a small fishing pole
                     new FishingPole(FishingPoleType.Small, GameConstants.SmallFishingPoleCost, FishSize.Small).Rent(
                         player);
                     return true;
-                case 2:
+                case 2: // Rent a medium fishing pole
                     new FishingPole(FishingPoleType.Medium, GameConstants.MediumFishingPoleCost, FishSize.Medium)
                         .Rent(player);
                     return true;
-                case 3:
+                case 3: // Rent a big fishing pole
                     new FishingPole(FishingPoleType.Big, GameConstants.BigFishingPoleCost, FishSize.Big).Rent(
                         player);
                     return true;
-                case 4:
+                case 4: // Auto rent and buy baits based on forecast
                     AutoRentAndBuyBaits();
                     return true;
-                case 5:
+                case 5: // Skip the day
                     skippedDay = true;
                     Console.WriteLine("\nSkipping the day...");
                     return false;
-                case 6:
+                case 6: // Quit the game
                     QuitGame();
                     break;
                 default:
@@ -166,11 +166,14 @@ public class Game(IFishingDelayableStrategy fishingDelayableStrategy, IPerforman
 
         var goldLeft = player.Gold;
 
+        // Weighted total cost of the best bait is calculated as the weight of the best bait multiplied by the cost of the best bait, plus the weights of the other baits multiplied by their respective costs.
+        // This is done to ensure that the player has a balanced amount of baits to use for casting the fishing pole but still has enough gold to buy the other baits.
         var weightedTotalCost = GameConstants.BestBaitWeight * GetBaitCost(bestOption.color) + GameConstants.OtherBaitWeight * GameConstants.RedBaitCost + GameConstants.OtherBaitWeight * GameConstants.BlueBaitCost + GameConstants.OtherBaitWeight * GameConstants.GreenBaitCost;
 
         var maxWeightedBaitSet = goldLeft / weightedTotalCost;
         var remainingGold = goldLeft % weightedTotalCost;
 
+        // Buy the best bait and the other baits based on the weight and quantity, then spend the remaining gold on the other baits to balance the total cost and allow player start fishing.
         BuyWeightedBaits(bestOption.color, GameConstants.BestBaitWeight * maxWeightedBaitSet);
         BuyWeightedBaits(FishColor.Red, GameConstants.OtherBaitWeight * maxWeightedBaitSet);
         BuyWeightedBaits(FishColor.Blue, GameConstants.OtherBaitWeight * maxWeightedBaitSet);
@@ -189,9 +192,17 @@ public class Game(IFishingDelayableStrategy fishingDelayableStrategy, IPerforman
         new Bait(color, GetBaitCost(color)).Buy(player, quantity);
     }
 
+    /// <summary>
+    /// Spends the remaining gold on the best bait and other baits to balance the total cost and allow player start fishing.
+    /// </summary>
+    /// <param name="remainingGold">The remaining gold to spend.</param>
+    /// <param name="bestColor">The color of the best bait.</param>
     private void SpendRemainingGoldOnBaits(int remainingGold, FishColor bestColor)
     {
         var bestCost = GetBaitCost(bestColor);
+        // The whole idea of this is to buy the best bait and the other baits based on the weight and quantity, then spend the remaining gold on the other baits to balance the total cost and allow player start fishing.
+        // This is done by checking if the remaining gold is greater than or equal to the cost of the best bait, and if so, buying the best bait and the other baits based on the weight and quantity.
+        //Then it checks for all the other bait color types.
         if (remainingGold >= bestCost)
         {
             new Bait(bestColor, bestCost).Buy(player, remainingGold / bestCost);
@@ -280,12 +291,14 @@ public class Game(IFishingDelayableStrategy fishingDelayableStrategy, IPerforman
     {
         var didFish = false;
 
+        // If the player did not choose to skip the day, they can go fishing!
         if (!skippedDay)
         {
             await fishingDelayableStrategy.FishAsync(pond, player);
             didFish = true;
         }
 
+        // After fishing, the player can evaluate their performance.
         var result = await performanceEvaluationDelayableStrategy.EvaluateAsync(player, didFish);
         switch (result)
         {
@@ -321,14 +334,19 @@ public class Game(IFishingDelayableStrategy fishingDelayableStrategy, IPerforman
     /// <returns>A <see cref="Task"/> representing the asynchronous operation of starting the game.</returns>
     public async Task StartGameAsync()
     {
+        // Each day, the player can start fishing. Currently, there are no persistent data, so each new run of the game will start with day 1 and a fresh fish forecast.
         var day = 1;
         while (true)
         {
             await StartDayAsync(day);
-            //await PlayDayAsync();
             day++;
+            
             Console.WriteLine("Do you want to continue? (y/n)");
-            if (Console.ReadLine()?.ToLower() == "y") continue;
+            if (Console.ReadLine()?.ToLower() == "y")
+            {
+                continue;
+            }
+
             QuitGame();
             break;
         }

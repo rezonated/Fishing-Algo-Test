@@ -16,12 +16,11 @@ internal static class Program
     /// <returns>A <see cref="Task"/> representing the asynchronous operation of starting the game.</returns>
     private static async Task Main()
     {
+        // Initialize the game with the standard fishing and performance evaluation delayable strategies.
         IFishingDelayableStrategy fishingDelayableStrategy = new StandardFishingDelayableStrategy();
-        
         IPerformanceEvaluationDelayableStrategy performanceEvaluationDelayableStrategy = new StandardPerformanceEvaluationDelayableStrategy();
         
         var game = new Game(fishingDelayableStrategy, performanceEvaluationDelayableStrategy);
-        
         await game.StartGameAsync();
     }
 }

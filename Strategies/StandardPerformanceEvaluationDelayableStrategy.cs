@@ -30,6 +30,9 @@ public class StandardPerformanceEvaluationDelayableStrategy : IPerformanceEvalua
         await baseStrategy.ApplyDelayAsync(GameConstants.MinJudgingDelayMilliseconds, GameConstants.MaxJudgingDelayMilliseconds,
             "Judging your performance...");
 
+        // If the player has more gold than 100, they win.
+        // If the player has less than or equal to 100, they lose.
+        // If the player skips the day, they tie.
         return player.Gold > 100 ? PerformanceResult.Win : player.Gold <= 100 ? PerformanceResult.Lose : PerformanceResult.Tie;
     }
 }
