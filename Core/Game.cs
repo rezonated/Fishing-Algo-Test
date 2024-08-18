@@ -1,16 +1,45 @@
-﻿using FishingAlgoTest.Constants;
+﻿using System.Diagnostics;
+using FishingAlgoTest.Constants;
 using FishingAlgoTest.Enums;
 using FishingAlgoTest.Interfaces;
 using FishingAlgoTest.Models;
 
 namespace FishingAlgoTest.Core;
 
-public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrategy performanceEvaluationStrategy)
+/// <summary>
+/// The actual core game class.
+/// This class represents the game, which includes the player, the pond, and the strategies for fishing and evaluating performance.
+/// It also includes methods for starting the game, displaying the game menu, and handling the game logic.
+/// The whole game is implemented using the fishing delayable strategy and the performance evaluation delayable strategy.
+/// The fishing delayable strategy is used for fishing the pond, casting the bait, and applying delays between actions.
+/// The performance evaluation delayable strategy is used for evaluating a player's performance, and applying delays between actions.
+/// The way it is implemented is that the game starts with the player choosing a fishing pole and baits, and the pond is generated based on the game constants configuration.
+/// The game then enters a loop where the player can fish, cast their bait, and evaluate their performance.
+/// </summary>
+/// <param name="fishingDelayableStrategy">The fishing delayable strategy to use for fishing and casting the bait.</param>
+/// <param name="performanceEvaluationDelayableStrategy">The performance evaluation delayable strategy to use for evaluating the player's performance.</param>
+public class Game(IFishingDelayableStrategy fishingDelayableStrategy, IPerformanceEvaluationDelayableStrategy performanceEvaluationDelayableStrategy)
 {
+    /// <summary>
+    /// The player of the game.
+    /// </summary>
     private Player player = new();
-    private readonly Pond pond = new();
-    private bool skipDay;
     
+    /// <summary>
+    /// The pond of the game.
+    /// </summary>
+    private readonly Pond pond = new();
+    
+    /// <summary>
+    /// Whether they skipped the day.
+    /// </summary>
+    private bool skippedDay;
+    
+    /// <summary>
+    /// Starts the game day asynchronously.
+    /// </summary>
+    /// <param name="day">The day to start.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation of starting the game day.</returns>
     private async Task StartDayAsync(int day)
     {
         Console.WriteLine($"Day {day} starts!");
@@ -23,24 +52,30 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
             return;
         }
 
-        if (skipDay)
+        if (skippedDay)
         {
             ResetDay();
             return;
         }
-
-        if (!player.FishingPole.FishSize.Equals(FishSize.Small) || !player.HasOnlyRedBait() || pond.HasSpecificFish(FishSize.Small, FishColor.Red))
-        {
-            BuyBaits();
-            await PlayDayAsync();
-        }
-        else
+        
+        Debug.Assert(player.FishingPole != null, "Player should have a fishing pole set before fishing.");
+        
+        if (player.FishingPole.FishSize.Equals(FishSize.Small) && player.HasOnlyRedBait() &&
+            !pond.HasSpecificFish(FishSize.Small, FishColor.Red))
         {
             Console.WriteLine("No suitable fish for your pole and bait. Skipping the day.");
             ResetDay();
+            return;
         }
+
+        BuyBaits();
+        await PlayDayAsync();
     }
 
+    /// <summary>
+    /// Chooses a fishing pole.
+    /// </summary>
+    /// <returns>True if the player chooses to skip the day, false otherwise.</returns>
     private bool ChooseFishingPole()
     {
         while (true)
@@ -53,50 +88,61 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
             Console.WriteLine("5. Skip the day");
             Console.WriteLine("6. Quit the game");
 
-            if (int.TryParse(Console.ReadLine(), out var choice))
-            {
-                switch (choice)
-                {
-                    case 1:
-                        new FishingPole(FishingPoleType.Small, GameConstants.SmallFishingPoleCost, FishSize.Small).Rent(
-                            player);
-                        return true;
-                    case 2:
-                        new FishingPole(FishingPoleType.Medium, GameConstants.MediumFishingPoleCost, FishSize.Medium)
-                            .Rent(player);
-                        return true;
-                    case 3:
-                        new FishingPole(FishingPoleType.Big, GameConstants.BigFishingPoleCost, FishSize.Big).Rent(
-                            player);
-                        return true;
-                    case 4:
-                        AutoRentAndBuyBaits();
-                        return true;
-                    case 5:
-                        skipDay = true;
-                        Console.WriteLine("\nSkipping the day...");
-                        return false;
-                    case 6:
-                        QuitGame();
-                        break;
-                    default:
-                        Console.WriteLine("\nInvalid choice. Please enter a number between 1 and 6.");
-                        break;
-                }
-            }
-            else
+            if (!int.TryParse(Console.ReadLine(), out var choice))
             {
                 Console.WriteLine("\nInvalid input. Please enter a number.");
+                return false;
+            }
+
+            switch (choice)
+            {
+                case 1:
+                    new FishingPole(FishingPoleType.Small, GameConstants.SmallFishingPoleCost, FishSize.Small).Rent(
+                        player);
+                    return true;
+                case 2:
+                    new FishingPole(FishingPoleType.Medium, GameConstants.MediumFishingPoleCost, FishSize.Medium)
+                        .Rent(player);
+                    return true;
+                case 3:
+                    new FishingPole(FishingPoleType.Big, GameConstants.BigFishingPoleCost, FishSize.Big).Rent(
+                        player);
+                    return true;
+                case 4:
+                    AutoRentAndBuyBaits();
+                    return true;
+                case 5:
+                    skippedDay = true;
+                    Console.WriteLine("\nSkipping the day...");
+                    return false;
+                case 6:
+                    QuitGame();
+                    break;
+                default:
+                    Console.WriteLine("\nInvalid choice. Please enter a number between 1 and 6.");
+                    break;
             }
         }
     }
 
+    /// <summary>
+    /// Quits the game.
+    /// </summary>
     private static void QuitGame()
     {
         Console.WriteLine("\nQuitting the game. Goodbye!");
         Environment.Exit(0);
     }
 
+    /// <summary>
+    /// Auto rents and buys baits.
+    /// How it works:
+    /// 1. Gets the best fishing option based on the fishes in the pond.
+    /// 2. Rents the fishing pole based on the best fishing option.
+    /// 3. Buys the baits based on the best fishing option with the calculated weight under the game constants configuration for best bait weight and other bait weight until the player has ran out of gold.
+    /// Only then, the player can actually start fishing.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
     private void AutoRentAndBuyBaits()
     {
         var bestOption = pond.GetBestFishingOption();
@@ -120,10 +166,7 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
 
         var goldLeft = player.Gold;
 
-        var weightedTotalCost = GameConstants.BestBaitWeight * GetBaitCost(bestOption.color) +
-                                GameConstants.OtherBaitWeight * GameConstants.RedBaitCost +
-                                GameConstants.OtherBaitWeight * GameConstants.BlueBaitCost +
-                                GameConstants.OtherBaitWeight * GameConstants.GreenBaitCost;
+        var weightedTotalCost = GameConstants.BestBaitWeight * GetBaitCost(bestOption.color) + GameConstants.OtherBaitWeight * GameConstants.RedBaitCost + GameConstants.OtherBaitWeight * GameConstants.BlueBaitCost + GameConstants.OtherBaitWeight * GameConstants.GreenBaitCost;
 
         var maxWeightedBaitSet = goldLeft / weightedTotalCost;
         var remainingGold = goldLeft % weightedTotalCost;
@@ -136,6 +179,11 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
         SpendRemainingGoldOnBaits(remainingGold, bestOption.color);
     }
 
+    /// <summary>
+    /// Buys the weighted baits based on the color and quantity.
+    /// </summary>
+    /// <param name="color">The color of the bait.</param>
+    /// <param name="quantity">The quantity of the bait to buy.</param>
     private void BuyWeightedBaits(FishColor color, int quantity)
     {
         new Bait(color, GetBaitCost(color)).Buy(player, quantity);
@@ -168,6 +216,11 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
         }
     }
 
+    /// <summary>
+    /// Gets the cost of a bait based on its color.
+    /// </summary>
+    /// <param name="color">The color of the bait.</param>
+    /// <returns>The cost of the bait.</returns>
     private static int GetBaitCost(FishColor color)
     {
         return color switch
@@ -179,6 +232,9 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
         };
     }
 
+    /// <summary>
+    /// Buys the baits.
+    /// </summary>
     private void BuyBaits()
     {
         while (player.Gold > 0)
@@ -191,44 +247,46 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
 
             var input = Console.ReadLine()?.Split(' ');
 
-            if (input is { Length: 2 } && int.TryParse(input[0], out var baitChoice) && int.TryParse(input[1], out var quantity))
+            if (input is not { Length: 2 } || !int.TryParse(input[0], out var baitChoice) ||
+                !int.TryParse(input[1], out var quantity))
             {
-                var bait = baitChoice switch
-                {
-                    1 => new Bait(FishColor.Red, GameConstants.RedBaitCost),
-                    2 => new Bait(FishColor.Blue, GameConstants.BlueBaitCost),
-                    3 => new Bait(FishColor.Green, GameConstants.GreenBaitCost),
-                    _ => null
-                };
+                Console.WriteLine("Invalid input. Please enter the bait number and quantity in the correct format (e.g., '2 10').");
+                return;
+            }
 
-                if (bait != null)
-                {
-                    bait.Buy(player, quantity);
-                }
-                else
-                {
-                    Console.WriteLine("Invalid bait choice. Please enter 1, 2, or 3.");
-                }
-            }
-            else
+            var bait = baitChoice switch
             {
-                Console.WriteLine(
-                    "Invalid input. Please enter the bait number and quantity in the correct format (e.g., '2 10').");
+                1 => new Bait(FishColor.Red, GameConstants.RedBaitCost),
+                2 => new Bait(FishColor.Blue, GameConstants.BlueBaitCost),
+                3 => new Bait(FishColor.Green, GameConstants.GreenBaitCost),
+                _ => null
+            };
+
+            if (bait == null)
+            {
+                Console.WriteLine("Invalid bait choice. Please enter 1, 2, or 3.");
+                return;
             }
+
+            bait.Buy(player, quantity);
         }
     }
 
+    /// <summary>
+    /// Plays the day asynchronously.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation of playing the day.</returns>
     private async Task PlayDayAsync()
     {
         var didFish = false;
 
-        if (!skipDay)
+        if (!skippedDay)
         {
-            await fishingStrategy.FishAsync(pond, player);
+            await fishingDelayableStrategy.FishAsync(pond, player);
             didFish = true;
         }
 
-        PerformanceResult result = await performanceEvaluationStrategy.EvaluateAsync(player, didFish);
+        var result = await performanceEvaluationDelayableStrategy.EvaluateAsync(player, didFish);
         switch (result)
         {
             case PerformanceResult.Win:
@@ -240,28 +298,37 @@ public class Game(IFishingStrategy fishingStrategy, IPerformanceEvaluationStrate
             case PerformanceResult.Tie:
                 Console.WriteLine("It's a tie! You kept the same gold.");
                 break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
 
         Console.WriteLine($"End of Day. You have {player.Gold} gold.");
         ResetDay();
     }
 
+    /// <summary>
+    /// Resets the day.
+    /// </summary>
     private void ResetDay()
     {
         player = new Player();
-        skipDay = false;
+        skippedDay = false;
     }
 
+    /// <summary>
+    /// Starts the game asynchronously.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation of starting the game.</returns>
     public async Task StartGameAsync()
     {
-        int day = 1;
+        var day = 1;
         while (true)
         {
             await StartDayAsync(day);
             //await PlayDayAsync();
             day++;
             Console.WriteLine("Do you want to continue? (y/n)");
-            if (Console.ReadLine().ToLower() == "y") continue;
+            if (Console.ReadLine()?.ToLower() == "y") continue;
             QuitGame();
             break;
         }
